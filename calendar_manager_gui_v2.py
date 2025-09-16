@@ -122,7 +122,6 @@ class Tools:
         except Exception as e:
             print(f"Error při psaní do konzole: {e}")
 
-
 class FakeContextMenu(customtkinter.CTkScrollableFrame):
     def __init__(self, parent, values, values2=[], mirror = False, command=None, del_option = False, del_cmd = None,selected_day = 1, **kwargs):
         super().__init__(parent, **kwargs)
@@ -476,7 +475,7 @@ class Month_handler:
                     day_frame = customtkinter.CTkFrame(master=week_frame,corner_radius=0,border_width=2)
                     day_label = customtkinter.CTkLabel(master=day_frame,text=f"{current_day}",font=("Arial", 20))
                     day_label.pack(pady=(5,0),padx=5,side="top",fill="both",expand=True)
-                    day_entry = customtkinter.CTkEntry(master=day_frame,font=("Arial", 20),justify="center",fg_color=entry_color,border_width=0)
+                    day_entry = customtkinter.CTkEntry(master=day_frame,font=("Arial", 20,"bold"),justify="center",fg_color=entry_color,border_width=0)
                     if check_json == True and found:
                         day_entry.insert(0, found["shift_type_short"])
                     else:
@@ -559,7 +558,6 @@ class Month_handler:
         print("Data exported to JSON file.")
         Tools.add_colored_line(self.output_console,"Data exported to JSON file", "green",font=("Arial",16),no_indent=True)
         self.generate_ics()
-
 
     def generate_ics(self):
         json_path = Path(self.json_name)
@@ -645,7 +643,6 @@ class Month_handler:
         print("ICS vygenerován:", ics_path)
         Tools.add_colored_line(self.output_console, f"ICS vygenerován: {ics_path}", "green",font=("Arial",16),no_indent=True)
         os.startfile(ics_path.parent)
-
 
 current_month_main = datetime.now().month
 current_year_main = datetime.now().year  
