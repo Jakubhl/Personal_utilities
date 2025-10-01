@@ -123,7 +123,7 @@ class Tools:
             print(f"Error při psaní do konzole: {e}")
 
 class FakeContextMenu(customtkinter.CTkScrollableFrame):
-    def __init__(self, parent, values, values2=[], mirror = False, command=None, del_option = False, del_cmd = None,selected_day = 1, **kwargs):
+    def __init__(self, parent, values, values2=[], mirror = False, command=None, del_option = False, del_cmd = None,selected_day = 1, widget = None,**kwargs):
         super().__init__(parent, **kwargs)
         self.command = command
         self.parent = parent
@@ -135,6 +135,7 @@ class FakeContextMenu(customtkinter.CTkScrollableFrame):
         width = kwargs.get("width")
         self._scrollbar.configure(width=15)
         self._scrollbar.configure(corner_radius=10)
+        self.widget = widget
         
         note_index = 0
         for val in values:
@@ -157,7 +158,7 @@ class FakeContextMenu(customtkinter.CTkScrollableFrame):
     def on_select(self, value):
         if self.command:
             print("selected",value)
-            self.parent.master.after(100, lambda: self.command(value,self.selected_day))
+            self.parent.master.after(100, lambda: self.command(self.widget,value,self.selected_day))
     def deletion(self, value):
         if self.del_cmd:
             # self.del_cmd(value)
@@ -282,6 +283,60 @@ class Month_handler:
         self.shift_options_short = [{"type":"D"},{"type":"N"},{"type":"R"},{"type":"/"},{"type":"DOV"},{"type":"OV"}]
         self.output_data = {"month":"","year":"","days":[]}
         self.json_name = "calendar_10_2025.json"
+        self.entry_list = []
+        self.currently_used_entry = None
+        self.currently_used_day = None
+
+    def call_next_entry(self,current_day):
+        next_entry_index = self.entry_list.index(next(item for item in self.entry_list if item["day"] == current_day))
+        if next_entry_index < len(self.entry_list)-1:
+            next_entry = self.entry_list[next_entry_index+1]["entry"]
+            print("next entry",next_entry)
+            # Simulate a button click by directly calling the bound handler
+            # next_entry.event_generate("<Button-1>")
+            # Alternatively, if you have a reference to the handler, call it directly:
+            self.manage_option_menu(None, values=self.shift_options_short, values2=self.shift_options, entry_widget=next_entry, selected_day=self.entry_list[next_entry_index+1]["day"])
+
+
+    def on_item_selected(self,entry_widget,value,seledted_day):
+        if entry_widget == None or value == None or seledted_day == None:
+            return
+        entry_widget.delete(0,200)
+        entry_widget.insert(0,str(value["type"]))
+
+        if str(value["type"]) == "D":
+            entry_widget.configure(fg_color="#C0AF19")
+        elif str(value["type"]) == "N":
+            entry_widget.configure(fg_color="#000000")
+        elif str(value["type"]) == "DOV":
+            entry_widget.configure(fg_color="#1976D2")
+        elif str(value["type"]) == "OV":
+            entry_widget.configure(fg_color="#D21976")
+        elif str(value["type"]) == "R":
+            entry_widget.configure(fg_color="#19D276")
+        else:
+            entry_widget.configure(fg_color="#2b2b2b")
+        entry_widget.update_idletasks()
+        self.root.update_idletasks()
+
+        found = next((d for d in self.output_data["days"] if d["day_num"] == seledted_day), None)
+        found["shift_type_short"] = str(value["type"])
+        found["shift_type"] = self.shift_options[self.shift_options_short.index(value)]
+
+        print(self.output_data)
+
+        self.context_menu.destroy()
+        # window.destroy()
+        self.context_menu = None
+        self.currently_used_entry = None
+        self.currently_used_day = None
+
+        # next_entry_index = self.entry_list.index(next(item for item in self.entry_list if item["day"] == seledted_day))
+        # if next_entry_index < len(self.entry_list)-1:
+        #     next_entry = self.entry_list[next_entry_index+1]["entry"]
+        #     print("next entry",next_entry)
+        #     next_entry.after(100,lambda: next_entry.event_generate("<Button-1>"))
+        self.root.after(100, lambda: self.call_next_entry(seledted_day))
 
     def manage_option_menu(self,e,values,entry_widget,values2 = [],mirror=None,selected_day=None):
         """
@@ -293,34 +348,8 @@ class Month_handler:
                 self.context_menu.destroy()
                 self.context_menu = None
 
-        def on_item_selected(value,seledted_day):
-            entry_widget.delete(0,200)
-            entry_widget.insert(0,str(value["type"]))
-
-            if str(value["type"]) == "D":
-                entry_widget.configure(fg_color="#C0AF19")
-            elif str(value["type"]) == "N":
-                entry_widget.configure(fg_color="#000000")
-            elif str(value["type"]) == "DOV":
-                entry_widget.configure(fg_color="#1976D2")
-            elif str(value["type"]) == "OV":
-                entry_widget.configure(fg_color="#D21976")
-            elif str(value["type"]) == "R":
-                entry_widget.configure(fg_color="#19D276")
-            else:
-                entry_widget.configure(fg_color="#2b2b2b")
-            entry_widget.update_idletasks()
-            self.root.update_idletasks()
-
-            found = next((d for d in self.output_data["days"] if d["day_num"] == seledted_day), None)
-            found["shift_type_short"] = str(value["type"])
-            found["shift_type"] = self.shift_options[self.shift_options_short.index(value)]
-
-            print(self.output_data)
-
-            self.context_menu.destroy()
-            # window.destroy()
-            self.context_menu = None
+        self.currently_used_entry = entry_widget
+        self.currently_used_day = selected_day
 
         if len(values) == 0:
             return
@@ -346,7 +375,7 @@ class Month_handler:
         window.overrideredirect(True)
         window.configure(bg="black")
         
-        listbox = FakeContextMenu(window, values, values2, mirror=mirror, command=on_item_selected, width=max_width_px,selected_day=selected_day)
+        listbox = FakeContextMenu(window, values, values2, mirror=mirror, command=self.on_item_selected, width=max_width_px,selected_day=selected_day,widget =entry_widget)
             
         listbox.pack(fill="both",expand=True)
         self.root.bind("<Button-1>", lambda e: window.destroy(), "+")
@@ -403,6 +432,7 @@ class Month_handler:
 
     def show_one_month(self):
         Tools.clear_widgets(self.root)
+        self.entry_list = []
         self.output_data["days"] = []
         check_json = self.check_json_file()
         main_frame = customtkinter.CTkFrame(master=self.root,corner_radius=0,border_width=2)
@@ -481,7 +511,6 @@ class Month_handler:
                     else:
                         day_entry.insert(0, "/")
                     day_entry.pack(pady=(0,5),padx=5,side="top",fill="both",expand=True)
-
                     day_entry.bind("<Button-1>",lambda e, entry=day_entry, day = current_day: self.manage_option_menu(e,
                                                                                                                     values=self.shift_options_short,
                                                                                                                     values2=self.shift_options,
@@ -490,12 +519,15 @@ class Month_handler:
                                                                                                                     )
                                                                                                                     )
                     
+                    self.entry_list.append({"day":current_day,"entry":day_entry})
                     day_frame.pack(ipady=2,ipadx=2,pady=5,side="left",fill="both",expand=True)
 
                     if j == 1 or j == 3 or j == 5:
                         day_frame.configure(fg_color="#323232")
 
             week_frame.pack(side="top",fill="x")
+
+        
 
         # export_button = customtkinter.CTkButton(master=main_frame,text="Export data",font=("Arial", 20),command=self.export_data)
         generate_calendar = customtkinter.CTkButton(master=main_frame,text="Generovat kalendář .ics",font=("Arial", 20),command=lambda: self.export_data())
@@ -504,6 +536,13 @@ class Month_handler:
         generate_calendar.pack(pady=10,side="top",fill="x",anchor="e",padx=10)
         self.output_console.pack(pady=10,side="top",fill="x",expand=True,padx=10)
         main_frame.pack(fill="both", expand=True)
+
+        self.root.bind("<d>", lambda e: self.on_item_selected(self.currently_used_entry,{"type":"D"},self.currently_used_day))
+        self.root.bind("<n>", lambda e: self.on_item_selected(self.currently_used_entry,{"type":"N"},self.currently_used_day))
+        self.root.bind("<v>", lambda e: self.on_item_selected(self.currently_used_entry,{"type":"DOV"},self.currently_used_day))
+        self.root.bind("<o>", lambda e: self.on_item_selected(self.currently_used_entry,{"type":"OV"},self.currently_used_day))
+        self.root.bind("<r>", lambda e: self.on_item_selected(self.currently_used_entry,{"type":"R"},self.currently_used_day))
+        self.root.bind("</>", lambda e: self.on_item_selected(self.currently_used_entry,{"type":"/"},self.currently_used_day))
 
     def show_month_overview(self):
         Tools.clear_widgets(self.root)
