@@ -296,7 +296,6 @@ class Month_handler:
             # Alternatively, if you have a reference to the handler, call it directly:
             self.manage_option_menu(None, values=self.shift_options_short, values2=self.shift_options, entry_widget=next_entry, selected_day=self.entry_list[next_entry_index+1]["day"])
 
-
     def on_item_selected(self,entry_widget,value,seledted_day):
         if entry_widget == None or value == None or seledted_day == None:
             return
@@ -445,6 +444,11 @@ class Month_handler:
         prev_month_button.pack(pady=10,padx=(10,5),side="right",fill="both",anchor="e")
         month_label.pack(pady=10,padx=10,side="left",fill="both",anchor="w")
         month_lable_frame.pack(side="top",fill="x")
+
+        checkbox_frame = customtkinter.CTkFrame(master=main_frame,corner_radius=0)
+        self.all_day_events = customtkinter.CTkCheckBox(master=checkbox_frame,text="všechny eventy celodenní",font=("Arial", 16))
+        self.all_day_events.pack(pady=10,padx=10,side="left",fill="both",anchor="w")
+        checkbox_frame.pack(side="top",fill="x")
 
         days_frame = customtkinter.CTkFrame(master=main_frame,corner_radius=0)
         for i in range(7):
@@ -645,10 +649,12 @@ class Month_handler:
             ])
         
         def all_day_event(d: date, summary: str, desc: str="") -> str:
-            return "\n".join([
+            uid = f"{uuid.uuid4()}@json-calendar"
+            dtstamp = fmt_dt_utc(datetime.now(timezone.utc))
+            return "\r\n".join([
                 "BEGIN:VEVENT",
-                f"UID:{uuid.uuid4()}@shifts",
-                f"DTSTAMP:{fmt_dt_utc(datetime.now(timezone.utc))}",
+                f"UID:{uid}",
+                f"DTSTAMP:{dtstamp}",
                 f"DTSTART;VALUE=DATE:{d.strftime('%Y%m%d')}",
                 f"DTEND;VALUE=DATE:{(d + timedelta(days=1)).strftime('%Y%m%d')}",  # neinkluzivní
                 f"SUMMARY:{ics_escape(summary)}",
@@ -662,7 +668,7 @@ class Month_handler:
             parts = [p.strip() for p in line.split(",")]
             d = datetime.strptime(parts[0], "%Y-%m-%d").date()
             start_s, end_s, summary = parts[1], parts[2], parts[3]
-            if parts[1] == "":
+            if (parts[1] == "") or (self.all_day_events.get() == 1):
                 events.append(all_day_event(d,summary))
             else:
                 events.append(vevent_timed(d, start_s, end_s, summary))
