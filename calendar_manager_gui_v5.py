@@ -285,6 +285,7 @@ class Month_handler:
         self.entry_list = []
         self.currently_used_entry = None
         self.currently_used_day = None
+        self.dump_dir = "data"
 
     def call_next_entry(self,current_day):
         next_entry_index = self.entry_list.index(next(item for item in self.entry_list if item["day"] == current_day))
@@ -406,7 +407,7 @@ class Month_handler:
         self.show_one_month()
 
     def check_json_file(self):
-        json_path = Path(f"calendar_{self.month}_{self.year}.json")
+        json_path = Path(self.dump_dir) / "internal" / f"calendar_{self.month}_{self.year}.json"
         if json_path.exists():
             print("JSON file found, loading data...")
             with json_path.open(encoding="utf-8") as f:
@@ -595,14 +596,14 @@ class Month_handler:
         print(output_cleaned)
         json_output = {"year_and_month":f"{selected_year:02d}-{selected_month:02d}","shifts":output_cleaned}
         self.json_name = f"calendar_{self.month}_{self.year}.json"
-        with open(self.json_name, "w", encoding="utf-8") as f:
+        with open(os.path.join(self.dump_dir,"internal",self.json_name), "w", encoding="utf-8") as f:
             json.dump(json_output, f, ensure_ascii=False, indent=4)
         print("Data exported to JSON file.")
         Tools.add_colored_line(self.output_console,"Data exported to JSON file", "green",font=("Arial",16),no_indent=True)
         self.generate_ics()
 
     def generate_ics(self):
-        json_path = Path(self.json_name)
+        json_path = Path(self.dump_dir) / "internal" / self.json_name
         with json_path.open(encoding="utf-8") as f:
             data = json.load(f)
 
@@ -686,7 +687,7 @@ class Month_handler:
         ])
 
         # uložení do souboru
-        ics_path = Path(f"calendar_{self.month}_{self.year}.ics")
+        ics_path = Path(self.dump_dir) / "calendars" / f"calendar_{self.month}_{self.year}.ics"
         ics_path.write_text(ics_content, encoding="utf-8")
         print("ICS vygenerován:", ics_path)
         Tools.add_colored_line(self.output_console, f"ICS vygenerován: {ics_path}", "green",font=("Arial",16),no_indent=True)
